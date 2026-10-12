@@ -15,11 +15,15 @@ def parse_email(file_path):
     
     # populate return tuple elements
     for li in lineList:
+        if (li == '\n'): continue;
         if (li[:5] == "From:" and '@' in li[6:-1] and lineCount == 0): sender  = li[6:-1]
         elif (li[:3] == "To:" and '@' in li[4:-1] and lineCount == 1):  recipient = li[4:-1]
         elif (li[:8] == "Subject:" and lineCount == 2):                  subject = li[9:-1]
         else: body+= (li + '\n')
         lineCount += 1;
+    
+    # format body
+    if len(body) > 2: body = body [0: -2] # remove trailing \n
 
     return sender, recipient, subject, body
 
