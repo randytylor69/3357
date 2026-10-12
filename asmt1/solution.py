@@ -20,6 +20,7 @@ def parse_email(file_path):
             continue;
         if (isSeparated == False): headerList.append(l);
         else: body+=l;
+    if isSeparated == False: raise SystemExit("ERROR: no email content")
     
     # parse header
     if len(headerList) == 0: raise SystemExit(1); # empty header ERROR!
@@ -34,7 +35,8 @@ def parse_email(file_path):
         # validate header content 
         if headerType.lower() == "from" or headerType.lower() == "to":
             if '@' not in headerCont: raise SystemExit("ERROR: '@' not in email")
-            elif len(headerCont.split('@')) !=2: raise SystemExit("ERROR: email length error")
+            user, domain = headerCont.split('@')
+            if not user or not domain: raise SystemExit("ERROR: email length error")
 
         # validate header type
         if headerType.lower() == "from": sender = headerCont;
