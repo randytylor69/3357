@@ -6,36 +6,35 @@ import time
 def parse_email(file_path):
     sender, recipient, subject, body = "", "", "", "";
     lineList = [];
-    lineCount = -1;
-    
+    headerList = [];
+    isSeparated = False;
+
     # append each line into a list
     with open(file_path) as f:
-        for line in f:
-            lineList.append(line);
-    
-    # populate return tuple elements
-    for li in lineList:
-        lineCount += 1;
+        for li in f: lineList.append(li);
 
-        if (li == '\n'): continue;
+    # separate header and body with blank line
+    for l in lineList:
+        if l == '\n': 
+            isSeparated = True;
+            continue;
+        if (isSeparated == False): headerList.append(l);
+        else: body+=l;
 
-        if (li[:5] == "From:" and lineCount == 0): 
+    for li in headerList:
+        if (li[:5] == "From:"): 
             if '@' in li[6:-1]:
                 sender  = li[6:-1]; continue 
             else: raise SystemExit(1);
 
-        if (li[:3] == "To:" and lineCount == 1):  
+        if (li[:3] == "To:"):  
             if '@' in li[4:-1]:
                 recipient = li[4:-1]; continue
             else:  raise SystemExit(1);
-        
-        if (li[:8] == "Subject:" and lineCount == 2):                  
+
+        if (li[:8] == "Subject:"):                  
             subject = li[9:-1]; continue
 
-        body+= (li + '\n')
-    
-    # format body
-    if len(body) > 2: body = body [0: -2] # remove trailing \n
 
     return sender, recipient, subject, body
 
