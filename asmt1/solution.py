@@ -15,27 +15,34 @@ def parse_email(file_path):
 
     # separate header and body with blank line
     for l in lineList:
-        if l == '\n': 
+        if l == '\n' and isSeparated == False: 
             isSeparated = True;
             continue;
         if (isSeparated == False): headerList.append(l);
         else: body+=l;
+    
+    # parse header
+    if len(headerList) == 0: raise SystemExit(1); # empty header ERROR!
 
     for li in headerList:
-        if (li[:5] == "From:"): 
-            if '@' in li[6:-1]:
-                sender  = li[6:-1]; continue 
-            else: raise SystemExit(1);
+        li = li.strip();
+        headerType, headerCont = li.split(":"); # split between header type and content
+        headerType = headerType.strip();
+        headerCont = headerCont.strip();
+        
+        # validate header content 
+        if headerType.lower() == "from" or headerType.lower() == "to":
+            if '@' not in headerCont: raise SystemExit("ERROR: '@' not in email")
+            elif len(headerCont.split('@')) !=2: raise SystemExit("ERROR: email length error")
 
-        if (li[:3] == "To:"):  
-            if '@' in li[4:-1]:
-                recipient = li[4:-1]; continue
-            else:  raise SystemExit(1);
-
-        if (li[:8] == "Subject:"):                  
-            subject = li[9:-1]; continue
+        # validate header type
+        if headerType.lower() == "from": sender = headerCont;
+        if headerType.lower() == "to": recipient = headerCont;
+        if headerType.lower() == "subject": subject = headerCont;
 
 
+
+    
     return sender, recipient, subject, body
 
 if __name__ == '__main__':
