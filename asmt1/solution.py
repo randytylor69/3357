@@ -6,7 +6,7 @@ import time
 def parse_email(file_path):
     sender, recipient, subject, body = "", "", "", "";
     lineList = [];
-    lineCount = 0;
+    lineCount = -1;
     
     # append each line into a list
     with open(file_path) as f:
@@ -15,12 +15,24 @@ def parse_email(file_path):
     
     # populate return tuple elements
     for li in lineList:
-        if (li == '\n'): continue;
-        if (li[:5] == "From:" and '@' in li[6:-1] and lineCount == 0): sender  = li[6:-1]
-        elif (li[:3] == "To:" and '@' in li[4:-1] and lineCount == 1):  recipient = li[4:-1]
-        elif (li[:8] == "Subject:" and lineCount == 2):                  subject = li[9:-1]
-        else: body+= (li + '\n')
         lineCount += 1;
+
+        if (li == '\n'): continue;
+
+        if (li[:5] == "From:" and lineCount == 0): 
+            if '@' in li[6:-1]:
+                sender  = li[6:-1]; continue 
+            else: raise SystemExit(1);
+
+        if (li[:3] == "To:" and lineCount == 1):  
+            if '@' in li[4:-1]:
+                recipient = li[4:-1]; continue
+            else:  raise SystemExit(1);
+        
+        if (li[:8] == "Subject:" and lineCount == 2):                  
+            subject = li[9:-1]; continue
+
+        body+= (li + '\n')
     
     # format body
     if len(body) > 2: body = body [0: -2] # remove trailing \n
