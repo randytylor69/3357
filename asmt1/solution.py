@@ -28,14 +28,14 @@ def parse_email(file_path):
     for li in headerList:
         li = li.strip();
         if ":" not in li: raise SystemExit("ERROR: wrong header format ")
-        headerType, headerCont = li.split(":"); # split between header type and content
+        headerType, headerCont = li.split(':',1); # split between header type and content
         headerType = headerType.strip();
         headerCont = headerCont.strip();
         
         # validate header content 
         if headerType.lower() == "from" or headerType.lower() == "to":
             if '@' not in headerCont: raise SystemExit("ERROR: '@' not in email")
-            user, domain = headerCont.split('@')
+            user, domain = headerCont.split('@',1)
             if not user or not domain: raise SystemExit("ERROR: email length error")
 
         # validate header type
@@ -47,6 +47,24 @@ def parse_email(file_path):
     
     return sender, recipient, subject, body
 
+
+# convert domain to bytes
+def build_dns_query(id, domain, qtype):
+    # convert id to bytes
+    id_byte = bytes([id])
+
+    # convert domain 
+    qname=b""
+    domainList = domain.split('.');
+    for label in domainList:
+        label_byte = bytes([len(label)]) + label.encode("ascii") # length_byte + ascii_byte
+        qname += label_byte
+    qname+=b"\x00"
+
+    return id_byte + qname + bytes([qtype])
+        
+
+
 if __name__ == '__main__':
     if len(sys.argv) not in (2, 3):
         raise SystemExit(1)
@@ -55,7 +73,7 @@ if __name__ == '__main__':
 
     # 1. Parse email
     sender, recipient, subject, body = parse_email(file_path)
-    print("sender: ", sender, "\nrecipient: ", recipient, "\nsubject: ", subject, "\nbody: ", body)
-    # domain = recipient.split('@')[1]
+    domain = recipient.split('@')[1]
 
-
+    mx_query = build_dns_query(18, domain, 15)
+    print(mx_query);
