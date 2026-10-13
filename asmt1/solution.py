@@ -118,7 +118,7 @@ def parse_dns_response(response, expected_id, qtype):
     # handle type MX
     if qtype == 15:
         domainList = []
-        answer_index = 2 # start from index 2 of the answer 
+        answer_index = 0 # start from index 2 of the answer 
         while answer_index < len(answer):
             leng = answer[answer_index]
             if leng == 0: break # found terminator 0x00
@@ -150,13 +150,13 @@ def send_smtp_email(ip, sender, recipient, subject, body):
         # 3. mail from
         send(f"MAIL FROM: <{sender}>\n", "250")
         # 4. receipient
-        send(f"RCPT TO:<{recipient}>\n", "250")
+        send(f"RCPT TO: <{recipient}>\n", "250")
         # 5. data
         send("DATA\n", "354")
         # 6. body
         send(
-            f"FROM: {sender}\n"
-            f"TO: {recipient}\n"
+            f"From: {sender}\n"
+            f"To: {recipient}\n"
             f"Subject: {subject}\n\n"
             f"{body}\n.\n", "250"
         )
