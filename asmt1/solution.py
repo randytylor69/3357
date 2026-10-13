@@ -73,13 +73,76 @@ def send_dns_query(dns_ip, query):
     try:
         clientSocket.sendto(query, (dns_ip, 1053));
         response, serverAddress = clientSocket.recvfrom(2048);
+        return response
     except timeout:
         raise SystemExit("ERROR: DNS query timeout");
     finally:
         clientSocket.close();
 
 
-     
+# ==========================================================================================
+# parse DNS server response
+def parse_dns_response(response, expected_id, qtype):
+
+    # validate repsonse obejcts
+    if response[0] != expected_id: raise SystemExit("ERROR: DNS response ID doesn't match")
+    if response[1] != 0: raise SystemExit(f"ERROR: DNS lookup failed with status{response[1]}")
+
+    # handle type A
+    if qtype == 1:
+        ip_bytes = response[2:6]
+        if len(ip_bytes)!=4: raise SystemExit("ERROR: Invalid A record response length")
+        return '.'.join(str(b) for b in ip_bytes) # i.e. "127.0.0.1"
+
+    # handle type MX
+    if qtype == 15:
+        domainList = []
+        idx = 2 # start from index 2 of the response query
+        while idx < len(response):
+            leng = response[idx]
+            if leng == 0: break # found terminator 0x00
+            idx += 1
+            domainSection = response[idx:idx+leng].decode("ascii")
+            domainList.append(domainSection)
+            idx += leng
+        return '.'.join(domainList)
+
+# ==========================================================================================
+# connect TCP
+def send_smtp_email(ip, sender, recipient, subject, body):
+    sock = socket(AF_INET, SOCK_STREAM)
+    sock.settimeout(5.0)
+
+    try:
+        sock.connect((ip, 1025))
+
+        # helper method to send stuff
+        def send(cmd, expected_code):
+            sock.sendall(cmd.encode("ascii"))
+            res = sock.recv(1024).decode("ascii")
+            if not res.startswith(expected_code): raise SystemExit("ERROR: Response not expected")
+        
+        # 1. read "220..."
+        send(None, "220")
+        # 2. send "HELO <send_domain>"
+        send("HELO localhost\n", "250")
+        # 3. mail from
+        send(f"MAIL FROM:<{sender}>\n", "250")
+        # 4. receipient
+        send(f"RCPT TO:<{recipient}>\n", "250")
+        # 5. data
+        send("DATA\n", "354")
+        # 6. body
+        send(
+            f"FROM: {sender}\n"
+            f"TO: {recipient}\n"
+            f"Subject: {subject}\n"
+            f"{body}\n.\n", "250"
+        )
+        # 7. quit
+        send("QUIT\n", "221")
+    except (timeout, error): raise SystemExit("ERROR: send_smtp_email timeout/error")
+    finally: sock.close()
 
 
 if __name__ == '__main__':
@@ -88,10 +151,15 @@ if __name__ == '__main__':
     file_path = sys.argv[1]
     dns_ip = sys.argv[2] if len(sys.argv) > 2 else '127.0.0.1'
 
-    # 1. Parse email
-# ==========================================================================================
     sender, recipient, subject, body = parse_email(file_path)
     domain = recipient.split('@')[1]
 
     mx_query = build_dns_query(18, domain, 15)
     mx_response = send_dns_query(dns_ip, mx_query)
+    mx_host = parse_dns_response(mx_response, 18, 15)
+
+    a_query = build_dns_query(19, mx_host, 1)
+    a_response = send_dns_query(dns_ip, a_query)
+    ip = parse_dns_response(a_response, 19, 1)
+
+    send_smtp_email(ip, sender, recipient, subject, body)
