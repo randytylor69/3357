@@ -100,27 +100,32 @@ def parse_dns_response(response, expected_id, qtype):
     
     # validate QCODE
     if response[index] != 0: 
-        raise SystemExit(f"ERROR: Failed QCODE from DNS response. Current: {response[2]}")
+        raise SystemExit(f"ERROR: Failed QCODE from DNS response. Current: {response[index]}")
     index += 1;
     
+    # read ANSWER_LEN
+    answer_len = response[index]
+    index += 1;
+
+    # read ANSWER
+    answer = response[index : index + answer_len]
 
     # handle type A
     if qtype == 1:
-        ip_bytes = response[2:6]
-        if len(ip_bytes)!=4: raise SystemExit("ERROR: Invalid A record response length")
-        return '.'.join(str(b) for b in ip_bytes) # i.e. "127.0.0.1"
+        if answer_len !=4: raise SystemExit("ERROR: Invalid A record response length")
+        return '.'.join(str(b) for b in answer) # i.e. "127.0.0.1"
 
     # handle type MX
     if qtype == 15:
         domainList = []
-        idx = 2 # start from index 2 of the response query
-        while idx < len(response):
-            leng = response[idx]
+        answer_index = 2 # start from index 2 of the answer 
+        while answer_index < len(answer):
+            leng = answer[answer_index]
             if leng == 0: break # found terminator 0x00
-            idx += 1
-            domainSection = response[idx:idx+leng].decode("ascii")
+            answer_index += 1
+            domainSection = answer[answer_index:answer_index + leng].decode("ascii")
             domainList.append(domainSection)
-            idx += leng
+            answer_index += leng
         return '.'.join(domainList)
 
 # ==========================================================================================
