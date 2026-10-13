@@ -84,9 +84,25 @@ def send_dns_query(dns_ip, query):
 # parse DNS server response
 def parse_dns_response(response, expected_id, qtype):
 
-    # validate repsonse obejcts
+    print(response,'\n')
+    # validate response length
+    if len(response) < 4: 
+        raise SystemExit(f"ERROR: Insufficient response length. Current: {len(response)}")
+
+    # validate ID
     if response[0] != expected_id: raise SystemExit("ERROR: DNS response ID doesn't match")
-    if response[1] != 0: raise SystemExit(f"ERROR: DNS lookup failed with status{response[1]}")
+
+    # parse QNAME echo (pass through the domain name)
+    index = 1;
+    while index < len(response) and response[index] !=0 : index += 1
+    if index >= len(response): raise SystemExit("ERROR: 0x00 terminator from DNS res not found")
+    index += 1; # go past the terminator
+    
+    # validate QCODE
+    if response[index] != 0: 
+        raise SystemExit(f"ERROR: Failed QCODE from DNS response. Current: {response[2]}")
+    index += 1;
+    
 
     # handle type A
     if qtype == 1:
@@ -118,16 +134,16 @@ def send_smtp_email(ip, sender, recipient, subject, body):
 
         # helper method to send stuff
         def send(cmd, expected_code):
-            sock.sendall(cmd.encode("ascii"))
+            if cmd: sock.sendall(cmd.encode("ascii"))
             res = sock.recv(1024).decode("ascii")
             if not res.startswith(expected_code): raise SystemExit("ERROR: Response not expected")
         
         # 1. read "220..."
         send(None, "220")
         # 2. send "HELO <send_domain>"
-        send("HELO localhost\n", "250")
+        send(f"HELO {sender.split('@')[1]}\n", "250")
         # 3. mail from
-        send(f"MAIL FROM:<{sender}>\n", "250")
+        send(f"MAIL FROM: <{sender}>\n", "250")
         # 4. receipient
         send(f"RCPT TO:<{recipient}>\n", "250")
         # 5. data
@@ -136,7 +152,7 @@ def send_smtp_email(ip, sender, recipient, subject, body):
         send(
             f"FROM: {sender}\n"
             f"TO: {recipient}\n"
-            f"Subject: {subject}\n"
+            f"Subject: {subject}\n\n"
             f"{body}\n.\n", "250"
         )
         # 7. quit
