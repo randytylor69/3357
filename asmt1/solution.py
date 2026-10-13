@@ -162,7 +162,10 @@ def send_smtp_email(ip, sender, recipient, subject, body):
         )
         # 7. quit
         send("QUIT\n", "221")
-    except (timeout, error): raise SystemExit("ERROR: send_smtp_email timeout/error")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise SystemExit(1)
     finally: sock.close()
 
 
