@@ -1,33 +1,39 @@
-# mock_dns.py
 import socket
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("127.0.0.1", 1053))
-print("Mock DNS server listening on 127.0.0.1:1053...")
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind(("127.0.0.1", 1025))
+server.listen(1)
+print("Mock SMTP server listening on 127.0.0.1:1025...")
 
 while True:
-    data, addr = sock.recvfrom(512)
-    req_id = data[0]
+    conn, addr = server.accept()
+    # 1. Greet on connect
+    conn.sendall(b"220 MockSMTP ready\n")
+    
+    in_data = False
+    while True:
+        data = conn.recv(1024).decode("ascii")
+        if not data:
+            break
+        
+        # When in DATA mode, look for the terminating dot line
+        if in_data:
+            if ".\n" in data or data == ".\r\n":
+                in_data = False
+                conn.sendall(b"250 Message accepted\n")
+            continue
 
-    # Find the end of QNAME in the query (starts at index 1, ends at 0x00)
-    qname_end = 1
-    while qname_end < len(data) and data[qname_end] != 0:
-        qname_end += 1
-    qname = data[1 : qname_end + 1]  # includes 0x00 terminator
-    qtype = data[qname_end + 1]
-
-    qcode = 0  # 0 = success
-
-    if qtype == 15:  # MX query -> return hostname mail.uwo.ca
-        answer_payload = b"\x04mail\x03uwo\x02ca\x00"
-    elif qtype == 1:  # A query -> return IPv4 127.0.0.1 (4 bytes)
-        answer_payload = bytes([127, 0, 0, 1])
-    else:
-        qcode = 1
-        answer_payload = b""
-
-    answer_len = len(answer_payload)
-
-    # Wire layout: [ID] [Echoed QNAME] [QCODE] [ANSWER_LEN] [ANSWER]
-    response = bytes([req_id]) + qname + bytes([qcode, answer_len]) + answer_payload
-    sock.sendto(response, addr)
+        if data.startswith("HELO"):
+            conn.sendall(b"250 Hello\n")
+        elif data.startswith("MAIL FROM:"):
+            conn.sendall(b"250 Sender OK\n")
+        elif data.startswith("RCPT TO:"):
+            conn.sendall(b"250 Recipient OK\n")
+        elif data.startswith("DATA"):
+            in_data = True
+            conn.sendall(b"354 Start mail input; end with <CRLF>.<CRLF>\n")
+        elif data.startswith("QUIT"):
+            conn.sendall(b"221 Bye\n")
+            break
+    conn.close()
