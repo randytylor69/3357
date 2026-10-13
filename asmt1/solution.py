@@ -1,4 +1,4 @@
-import socket
+from socket import *
 import os
 import sys
 import time
@@ -47,7 +47,7 @@ def parse_email(file_path):
     
     return sender, recipient, subject, body
 
-
+# ==========================================================================================
 # convert domain to bytes
 def build_dns_query(id, domain, qtype):
     # convert id to bytes
@@ -62,7 +62,24 @@ def build_dns_query(id, domain, qtype):
     qname+=b"\x00"
 
     return id_byte + qname + bytes([qtype])
-        
+
+# ==========================================================================================
+# deliver bytes to the DNS server
+def send_dns_query(dns_ip, query):
+    # create UDP socket
+    clientSocket = socket(AF_INET, SOCK_DGRAM);
+    clientSocket.settimeout(5.0);
+
+    try:
+        clientSocket.sendto(query, (dns_ip, 1053));
+        response, serverAddress = clientSocket.recvfrom(2048);
+    except timeout:
+        raise SystemExit("ERROR: DNS query timeout");
+    finally:
+        clientSocket.close();
+
+
+     
 
 
 if __name__ == '__main__':
@@ -72,8 +89,9 @@ if __name__ == '__main__':
     dns_ip = sys.argv[2] if len(sys.argv) > 2 else '127.0.0.1'
 
     # 1. Parse email
+# ==========================================================================================
     sender, recipient, subject, body = parse_email(file_path)
     domain = recipient.split('@')[1]
 
     mx_query = build_dns_query(18, domain, 15)
-    print(mx_query);
+    mx_response = send_dns_query(dns_ip, mx_query)
