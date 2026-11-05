@@ -9,3 +9,6 @@
 - **Blocking Call**: `recvfrom` sits and waits. If the server dropped the packet then it waits forever, so we use `settimeout(1)` to change the wait into termination in 1 second and raise and exception.
 
 - **RTT**: Time elapsed from `sento` and `recvfrom`, returns Python float in seconds.
+
+
+
