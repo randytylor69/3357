@@ -1,15 +1,34 @@
-import random
+import sys
+import time
 from socket import *
 
-serverSocket = socket(AF_INET, SOCK_DGRAM)
-serverSocket.bind(('', 12000))
-print("The server is ready to receive")
+# read hostname and port from cmd
 
-while True:
-    rand = random.randint(0, 10)
-    message, address = serverSocket.recvfrom(1024)
-    message = message.upper()
-    if rand < 4:
-        continue
+server_name = sys.argv[1]
+server_port = int(sys.argv[2])
 
-    serverSocket.sendto(message, address)
+# open UDP socket
+
+client_socket = socket(AF_INET, SOCK_DGRAM)
+client_socket.settimeout(1)
+
+# send 10 pins: [Ping <sequence_number> <timestamp>] 
+
+for sequence in range(1,11):
+    msg = f"Ping {str(sequence)} {time.ctime()}"
+    try:
+        start = time.time()
+        client_socket.sendto(msg.encode(), (server_name, server_port))
+        reply, server_address = client_socket.recvfrom(1024)
+        RTT = time.time() - start
+
+        print(f"Replay from {server_address[0]}: {reply.decode()}")
+        print(f"RTT: {str(RTT)}")
+    
+    except timeout:
+        print("ERROR: Request timed out.")
+
+client_socket.close()
+
+
+
