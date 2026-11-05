@@ -22,11 +22,11 @@ for sequence in range(1,11):
         reply, server_address = client_socket.recvfrom(1024)
         RTT = time.time() - start
 
-        print(f"Replay from {server_address[0]}: {reply.decode()}")
+        print(f"Reply from {server_address[0]}: {reply.decode()}")
         print(f"RTT: {str(RTT)}")
     
     except timeout:
-        print("ERROR: Request timed out.")
+        print("Request timed out.")
 
 client_socket.close()
 
