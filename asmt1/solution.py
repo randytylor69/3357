@@ -148,9 +148,9 @@ def send_smtp_email(ip, sender, recipient, subject, body):
         # 2. send "HELO <send_domain>"
         send(f"HELO {sender.split('@')[1]}\n", "250")
         # 3. mail from
-        send(f"MAIL FROM: <{sender}>\n", "250")
+        send(f"MAIL FROM: {sender}\n", "250")
         # 4. receipient
-        send(f"RCPT TO: <{recipient}>\n", "250")
+        send(f"RCPT TO: {recipient}\n", "250")
         # 5. data
         send("DATA\n", "354")
         # 6. body
